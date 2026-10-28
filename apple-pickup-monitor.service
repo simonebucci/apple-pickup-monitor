@@ -1,0 +1,20 @@
+[Unit]
+Description=Apple iPhone pickup availability monitor
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/apple-pickup-monitor
+ExecStart=/usr/bin/python3 -u /home/YOUR_USER/apple-pickup-monitor/check_iphone_duo.py --config /home/YOUR_USER/apple-pickup-monitor/config.json
+# Optional private, root-owned file for NTFY_TOKEN; see README.
+# EnvironmentFile=/etc/apple-pickup-monitor.env
+Restart=on-failure
+RestartSec=300
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
