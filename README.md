@@ -19,7 +19,7 @@ Choose your regional Apple shop, nearby locations, stores, iPhone variants and c
 
 - **Python 3.10 or later.**
 - An internet connection and trusted HTTPS certificates.
-- Both `check_iphone_duo.py` and `configuration.py` in the same directory.
+- Both `apple_pickup_monitor.py` and `configuration.py` in the same directory.
 - For phone notifications, an ntfy app subscription to your personal topic.
 
 The computer must remain running, awake and connected for checks to continue. Your phone receives notifications; it does not need to run the script.
@@ -29,8 +29,8 @@ The computer must remain running, awake and connected for checks to continue. Yo
 Download the repository using **Code → Download ZIP** on GitHub and extract it, or clone it. Open a terminal in the project directory, then run:
 
 ```sh
-python3 check_iphone_duo.py --setup
-python3 check_iphone_duo.py
+python3 apple_pickup_monitor.py --setup
+python3 apple_pickup_monitor.py
 ```
 
 On Windows, replace `python3` with `py -3`.
@@ -77,7 +77,7 @@ CAP, ZIP code and postcode are all entered as text; Apple interprets them for th
 5. Start monitoring without `--setup` or `--once`:
 
 ```sh
-python3 check_iphone_duo.py
+python3 apple_pickup_monitor.py
 ```
 
 The monitor prints the configured destination and sends an `iPhone monitor active` notification with a “Monitoring started” message before checking stock. It sends subsequent stock, error, recovery and daily status messages to that same topic.
@@ -101,7 +101,7 @@ read -r NTFY_TOKEN
 stty echo
 printf '\n'
 export NTFY_TOKEN
-python3 check_iphone_duo.py
+python3 apple_pickup_monitor.py
 ```
 
 Windows PowerShell:
@@ -109,7 +109,7 @@ Windows PowerShell:
 ```powershell
 $secret = Read-Host 'ntfy access token' -AsSecureString
 $env:NTFY_TOKEN = [System.Net.NetworkCredential]::new('', $secret).Password
-py -3 check_iphone_duo.py
+py -3 apple_pickup_monitor.py
 ```
 
 The phone subscription may also require credentials. Background services need their own token environment, as described below. Features and limits depend on your server; consult the [ntfy documentation](https://docs.ntfy.sh/).
@@ -121,9 +121,9 @@ Install Python from [python.org](https://www.python.org/downloads/macos/) or you
 ```sh
 cd ~/Downloads/apple-pickup-monitor
 python3 --version
-python3 check_iphone_duo.py --setup
-python3 check_iphone_duo.py --once
-python3 check_iphone_duo.py
+python3 apple_pickup_monitor.py --setup
+python3 apple_pickup_monitor.py --once
+python3 apple_pickup_monitor.py
 ```
 
 Use your actual extracted folder path. `--once` is a real single check, not a notification test: it can send a stock alert. A valid response without pickup availability is a successful negative check. A failed round returns exit status 1; see the exit-status details below.
@@ -131,7 +131,7 @@ Use your actual extracted folder path. `--once` is a real single check, not a no
 The computer must stay awake and connected. For an awake monitoring session:
 
 ```sh
-caffeinate -i python3 check_iphone_duo.py
+caffeinate -i python3 apple_pickup_monitor.py
 ```
 
 Closing a laptop lid or putting it to sleep can still stop checks. For unattended use at login, copy `examples/com.example.apple-pickup-monitor.plist` to `~/Library/LaunchAgents/`, replace **every** `YOUR_USER` and `PYTHON_PATH` placeholder with your real absolute paths, and verify the folder contains your configured `config.json`. Find Python with `command -v python3`. Use a stable Python executable rather than a temporary shell shim. Then:
@@ -171,9 +171,9 @@ If your distribution provides an older Python, upgrade to a supported OS/Python 
 
 ```sh
 cd ~/apple-pickup-monitor
-python3 check_iphone_duo.py --setup
-python3 check_iphone_duo.py --once
-python3 check_iphone_duo.py
+python3 apple_pickup_monitor.py --setup
+python3 apple_pickup_monitor.py --once
+python3 apple_pickup_monitor.py
 ```
 
 For a Pi running without a screen, connect over SSH and run setup in that terminal. Setup requires interactive input; create the configuration before enabling a background service.
@@ -211,9 +211,9 @@ Install Python 3.10+ from [python.org](https://www.python.org/downloads/windows/
 ```powershell
 cd "$HOME\Downloads\apple-pickup-monitor"
 py -3 --version
-py -3 check_iphone_duo.py --setup
-py -3 check_iphone_duo.py --once
-py -3 check_iphone_duo.py
+py -3 apple_pickup_monitor.py --setup
+py -3 apple_pickup_monitor.py --once
+py -3 apple_pickup_monitor.py
 ```
 
 Keep the terminal open or create a Windows Task Scheduler task at logon with your full Python executable path, the script path and `--config` with an absolute path. Set its working directory to the repository folder and prevent overlapping instances. A scheduled task needs its own token environment/credentials; it does not inherit an arbitrary PowerShell session. Disable any task duration limit that would terminate a continuous monitor. Windows sleep pauses checks.
@@ -226,18 +226,18 @@ The script should run on other Linux distributions, a server, a VM or a NAS with
 
 | Command | Action |
 | --- | --- |
-| `python3 check_iphone_duo.py --setup` | Create or replace the configuration interactively, then exit |
-| `python3 check_iphone_duo.py` | Start continuous monitoring and send the startup notification when ntfy is enabled |
-| `python3 check_iphone_duo.py --once` | Perform one real checking round, without the startup notification |
-| `python3 check_iphone_duo.py --config london.json` | Use a specific configuration file |
-| `python3 check_iphone_duo.py --help` | Show command-line help |
-| `python3 check_iphone_duo.py --version` | Show the program version |
+| `python3 apple_pickup_monitor.py --setup` | Create or replace the configuration interactively, then exit |
+| `python3 apple_pickup_monitor.py` | Start continuous monitoring and send the startup notification when ntfy is enabled |
+| `python3 apple_pickup_monitor.py --once` | Perform one real checking round, without the startup notification |
+| `python3 apple_pickup_monitor.py --config london.json` | Use a specific configuration file |
+| `python3 apple_pickup_monitor.py --help` | Show command-line help |
+| `python3 apple_pickup_monitor.py --version` | Show the program version |
 
 To keep independent configurations:
 
 ```sh
-python3 check_iphone_duo.py --setup --config london.json
-python3 check_iphone_duo.py --config london.json
+python3 apple_pickup_monitor.py --setup --config london.json
+python3 apple_pickup_monitor.py --config london.json
 ```
 
 Use an absolute `--config` path for background services. Only run one instance per configuration unless you deliberately want duplicate requests and notifications.
