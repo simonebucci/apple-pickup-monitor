@@ -1,6 +1,6 @@
 # Apple Pickup Monitor
 
-A small, English-language Python script that checks whether selected iPhone variants are available for pickup at selected Apple Stores and sends notifications to **your own ntfy topic**. Originally written for iPhone Duo, it can discover other iPhone families from the selected regional Apple shop.
+A small Python script that checks whether selected iPhone variants are available for pickup at selected Apple Stores and sends notifications to **your own ntfy topic**. Originally written for iPhone Duo, it can discover other iPhone families from the selected regional Apple shop. It worked to get mine :)
 
 **Python 3.10 or later. No pip packages, Apple account, Apple credentials or administrator privileges are required to run it.**
 
