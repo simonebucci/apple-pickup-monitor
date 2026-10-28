@@ -1,76 +1,71 @@
 # Apple Pickup Monitor
 
-A small Python script that checks whether selected iPhone variants are available for pickup at selected Apple Stores and sends notifications to **your own ntfy topic**. Originally written for iPhone Duo, it can discover other iPhone families from the selected regional Apple shop. It worked to get mine :)
+An English-language version of the original iPhone pickup checker, with a separate guided configuration for your Apple shop, nearby stores, iPhone models, check frequency and **existing personal ntfy topic**.
 
-**Python 3.10 or later. No pip packages, Apple account, Apple credentials or administrator privileges are required to run it.**
+**Python 3.10+. Standard library only: no pip packages, Apple login or browser automation.** Keep `check_iphone_duo.py` and `configuration.py` in the same directory.
 
-## What it does
+## What is preserved from the original
 
-- An interactive setup asks for your regional Apple shop and nearby postal code/location.
-- Choose one or more iPhone families, then exact storage/color/model variants.
-- Choose stores from the nearby stores returned by Apple, including stores currently without stock.
-- Set the interval between checks (15 minutes by default; minimum 2).
-- Enter the name of the topic you already use in the ntfy app, or use terminal-only output.
-- Remember delivered alerts across restarts and retry failed notifications when stock is confirmed again.
-- Slow down after incomplete checks and stop the current round if Apple returns HTTP 403, 429 or 541.
+The monitoring engine was rebuilt directly from the original script. The original URL builder, Apple response parser, request retry logic, store/product name filters and cycle control flow are retained. Automated structural checks compare these functions against fingerprints of the original, ignoring translated message text.
 
-This is an unofficial availability checker. It does not reserve or buy anything. Open the Apple link and confirm availability yourself; stock can change before you arrive or complete checkout.
+- Both postal-code nearby searches **and** direct store requests are performed.
+- The parser reads all variants returned by Apple's response, including alternatives recommended by Apple. It does not demand that the returned part number equal the requested part number.
+- Available entries are filtered by the selected store names and iPhone family, as in the original.
+- Requests get the original retry rules, pauses and timeouts; errors, recovery, daily status and the two-hour pending notification queue follow the original behavior.
+- Startup notifications use the original **POST to `https://your-ntfy-server/your-topic`**, with a UTF-8 text body and Title/Priority/Tags/Click headers. There is no JSON publication to the server root.
+- Alert history and pending messages stay **in memory**, as in the original. Restarting begins fresh; files from earlier versions do not suppress alerts.
 
-## Regional support and limitations
+Changes around that engine are limited to guided configuration, English messages, regional URL/header settings, optional ntfy token authentication, the verified macOS certificate helper, and removal of test-only command-line overrides. Multiple selected families each use an instance of the original monitor with their own family configuration.
 
-There is no hard-coded country, store, regional SKU suffix, time zone or list of current iPhone models. Shop codes include `us`, `uk`, `it`, `ca`, `au`, `de`, `fr`, `jp`, `hk-zh` and `cn`. Use Apple's shop code, which is not always an ISO country code (`uk`, for example). China maps to `www.apple.com.cn`. You can instead paste an HTTPS regional shop root, such as `https://www.apple.com/ca/shop/`.
+## Important: selected query variants and Apple alternatives
 
-**This does not guarantee support in every country.** The selected Apple shop must sell the product online and expose compatible pickup responses for its own retail stores. Resellers and regions without that service are not supported. SKU catalogs and pickup endpoints are undocumented and may change or be blocked. Product names, store names and pickup quotes can remain in the regional shop's language even though the program and instructions are English.
+Setup lets you select model, capacity and color variants **to query**. To preserve the original logic, a response may also produce an alert for another capacity/color in the same iPhone family that Apple recommends. The alert reports the **actual returned product title** and store, never renames it to the requested variant. The family filter is the original name-substring filter; it is not an exact variant filter.
 
-The setup lists only nearby stores returned by Apple, not every store within a configurable geographic radius. Try another postal code if a store is missing. A configuration covers one regional shop. To monitor multiple countries, create separate configurations with separate state files. Part numbers are regional: do not copy a US SKU into an Italian configuration.
+For example, a lookup for a black 512GB phone may return a silver 512GB or black 1TB phone. The original checker reports those alternatives, and so does this version. If a black 512GB SKU is absent from that response, the tool cannot claim that exact phone is available merely because a different variant is available.
 
-Current variant discovery reads structured iPhone records embedded in Apple's purchase pages and excludes accessory records. If that data is absent, setup asks for exact regional part numbers and display names. It does not promise to discover every carrier-specific or dynamically loaded option. Select only purchase options applicable to you; pickup lookup uses Apple's `UNLOCKED/WW` purchase context.
+This is an unofficial checker. It does not reserve or buy phones; confirm the exact model and pickup option on Apple before ordering or travelling.
 
 ## Quick start
 
-1. Install Python 3.10 or later using the platform instructions below.
-2. Download this repository as a ZIP and extract it, or clone your published repository.
-3. Open a terminal in the extracted repository directory.
-4. Run:
+Download the full repository/ZIP and extract it. From its directory:
 
 ```sh
 python3 check_iphone_duo.py --setup
 python3 check_iphone_duo.py
 ```
 
-On Windows, replace `python3` with `py -3`.
+On Windows use `py -3` instead of `python3`.
 
-During setup:
+Setup asks for:
 
-1. Enter your regional shop code or shop URL.
-2. Enter a nearby postal code or location accepted by that shop.
-3. Select iPhone families by number. Use `1,3`, `1-3` or `all`.
-4. Select the exact storage and color variants for each family.
-5. Select nearby stores by number.
-6. Set your check interval.
-7. Enable ntfy and enter the server used by your app (`https://ntfy.sh` by default).
-8. Enter **only the exact name of the topic you have already added in the ntfy app**, not its URL. Setup requires a name and never generates one.
+1. Regional Apple shop code/URL, such as `us`, `uk`, `it`, `ca`, `au`, `de`, `fr`, `jp`, `hk-zh` or `cn`.
+2. Nearby postal code/location. You may enter several, separated by commas. Leading zeros, letters, spaces and hyphens are preserved. Apple interprets the value for the selected shop.
+3. One or more current iPhone families, then capacity/color variants to query. Enter `1,3`, `1-3` or `all` to choose list items.
+4. Nearby stores returned by Apple. Selected stores' postal codes are also included in subsequent nearby searches when Apple supplies them, alongside direct requests to those stores.
+5. Normal check interval: 15 minutes by default, minimum 2.
+6. Whether to enable ntfy, your server (`https://ntfy.sh` by default), and **only the name of your topic already added in the app**.
 
-Running without an existing configuration starts the same setup in an interactive terminal, saves the file, and exits. Run again to monitor. `--setup` replaces the selected configuration; preserve a copy first if you want to keep it. It sends no startup or test notifications. A notification is sent when selected stock is confirmed.
+Setup saves `config.json` and exits; **run the second command to start monitoring and receive the startup notification**. Setup itself sends no notification and generates no topic. Starting without an existing config opens the same setup and exits. `--setup` replaces the selected config.
 
-## ntfy: notifications on your phone
+Regional support depends on Apple's online shop exposing the same pickup service. Not every country, reseller or Apple product is supported. Shop codes are Apple's codes (`uk`, for example), not always ISO country codes. China uses `www.apple.com.cn`. Product/store names and quotes may remain localized by Apple. On shops where a location is not accepted or pickup is not offered, setup cannot invent a compatible alternative.
 
-[ntfy](https://ntfy.sh/) accepts HTTP messages and delivers them to subscribed devices. You do not need to run an ntfy server yourself.
+## ntfy: use the subscription you already have
 
-1. Install the ntfy app for [iOS or Android](https://docs.ntfy.sh/subscribe/phone/), or use its [web app](https://ntfy.sh/app).
-2. In the app, add your personal topic/subscription first, or use one you have already added. Allow notifications in the operating system.
-3. During monitor setup, accept `https://ntfy.sh` if that is the server used by your app, or enter your own HTTPS ntfy server root URL.
-4. Enter **only your existing topic name**, exactly as shown in the app. For example, if your subscription URL is `https://ntfy.sh/my-personal-topic`, enter `my-personal-topic`. Do not paste the URL. There is no default topic; an empty or invalid name is rejected and requested again.
-5. Keep the monitor running on your Mac, Pi or other computer. Your phone receives notifications; it does not run the checks.
+1. Install/open the [ntfy app for iOS or Android](https://docs.ntfy.sh/subscribe/phone/) or the [web app](https://ntfy.sh/app).
+2. Add your own topic in that app first, or use a subscription you already have. Enable phone notification permissions.
+3. In script setup, choose the **same server** as the app. For a normal ntfy.sh subscription, press Enter at the server prompt.
+4. Enter **only the topic name**, exactly as shown in the app. If its URL is `https://ntfy.sh/my-personal-topic`, enter `my-personal-topic`, not the full URL. Empty names and URLs are rejected and requested again.
+5. Start the script without `--setup` or `--once`. It prints the configured destination and sends `iPhone monitor active` with a “Monitoring started” message before checking stock.
 
-Setup only saves your chosen server and existing topic name. It does not generate a topic, create a subscription or send a setup/test notification. It cannot verify that you subscribed to that topic in the app: the spelling and server must match your existing subscription. Actual stock notifications are published to that configured topic when availability is confirmed.
+The script never creates or randomly generates a topic. It cannot check whether your phone is subscribed: topic spelling and server must match your existing app subscription. If publication fails, the original three attempts run and the log shows `ntfy notification not delivered (...)` with the network/HTTP error. A message printed in the terminal is not proof of phone delivery. Phone permissions, Do Not Disturb, battery settings and server delivery configuration can also affect arrival; see the [ntfy phone guide](https://docs.ntfy.sh/subscribe/phone/).
 
-On public ntfy servers, anyone who knows an unprotected topic can generally read its messages and publish to it. A random topic reduces guessing but is not access control. Use a protected topic/server for stronger privacy. Do not publish your generated configuration, screenshots of your subscription or your token. See [ntfy topic selection and publishing](https://docs.ntfy.sh/publish/) and [server access control](https://docs.ntfy.sh/config/#access-control).
+Unprotected public ntfy topics can generally be read and published to by anyone who knows their name. Use a hard-to-guess personal topic or a protected server/topic, and keep your configuration private. See [topic selection](https://docs.ntfy.sh/publish/) and [access control](https://docs.ntfy.sh/config/#access-control).
 
-For a server/topic requiring authentication, create a publishing access token according to that server's rules and set `NTFY_TOKEN` before starting the monitor:
+For protected topics, create a publishing access token according to your server's rules and set `NTFY_TOKEN` before launching. Public unprotected topics normally need no token. The token is optional and sent only in the Authorization header; setup never writes it to JSON.
+
+macOS/Linux (read without entering the token in shell history):
 
 ```sh
-# macOS, Raspberry Pi, Linux: read without putting the token in shell history
 printf 'ntfy access token: '
 stty -echo
 read -r NTFY_TOKEN
@@ -80,7 +75,7 @@ export NTFY_TOKEN
 python3 check_iphone_duo.py
 ```
 
-In Windows PowerShell:
+Windows PowerShell:
 
 ```powershell
 $secret = Read-Host 'ntfy access token' -AsSecureString
@@ -88,7 +83,7 @@ $env:NTFY_TOKEN = [System.Net.NetworkCredential]::new('', $secret).Password
 py -3 check_iphone_duo.py
 ```
 
-The token is sent only in the ntfy Authorization header. It is never saved by setup, added to notification links or printed by network errors. The phone subscription may also need credentials for protected topics. Public unprotected topics normally need no token. Public service limits and account features can change; consult the server's current documentation. Notifications can be delayed by phone permissions, battery optimization or server configuration; follow the [phone delivery guidance](https://docs.ntfy.sh/subscribe/phone/) and the [self-hosting documentation](https://docs.ntfy.sh/config/) when applicable.
+The phone subscription may also require credentials. Background services need their own token environment, as described below. Limits and features depend on the server; consult the [current ntfy documentation](https://docs.ntfy.sh/).
 
 ## macOS
 
@@ -102,7 +97,7 @@ python3 check_iphone_duo.py --once
 python3 check_iphone_duo.py
 ```
 
-Use your actual extracted folder path. `--once` is a real single check, not a notification test: it can send a stock alert. Exit status 1 can mean unknown availability, not just a network failure.
+Use your actual extracted folder path. `--once` is a real single check, not a notification test: it can send a stock alert. A valid response without pickup availability is a successful negative check. A failed round returns exit status 1; see the exit-status details below.
 
 The computer must stay awake and connected. For an awake monitoring session:
 
@@ -129,7 +124,7 @@ A LaunchAgent runs while that user is logged in; it does not prevent sleep. If y
 
 If a python.org installation reports a certificate verification error, run its bundled `Install Certificates.command` in `/Applications/Python 3.x/`. For a managed network, install/configure the trusted corporate certificate through your administrator. Do not disable HTTPS verification.
 
-Version 1.0.1 also loads the macOS CA bundle at `/etc/ssl/cert.pem` when available, in addition to Python's default trusted certificates. Explicit `SSL_CERT_FILE` or `SSL_CERT_DIR` settings take precedence and disable this automatic addition. HTTPS verification always remains enabled. DNS, timeout and certificate failures now have separate messages; setup stops on a connection failure instead of asking for another product URL that would encounter the same problem.
+The HTTPS helper also loads the macOS CA bundle at `/etc/ssl/cert.pem` when available, in addition to Python's default trusted certificates. Explicit `SSL_CERT_FILE` or `SSL_CERT_DIR` settings take precedence and disable this automatic addition. HTTPS verification always remains enabled. The original network exception details remain visible in the log. Setup stops on connection failures instead of treating them as product selection problems.
 
 If pasting a product URL manually, use the plain address, such as `https://www.apple.com/it/shop/buy-iphone/iphone-duo`. Markdown links copied from chat (`[label](https://...)`), angle-bracket links and backtick-wrapped addresses are also recognized and normalized before validation.
 
@@ -156,7 +151,7 @@ For a Pi running without a screen, connect over SSH and run setup in that termin
 
 ### Run automatically at boot with systemd
 
-Edit `examples/apple-pickup-monitor.service` and replace every `YOUR_USER` placeholder and directory with the actual user/repository path. Raspberry Pi usernames are not necessarily `pi`. The service uses `/usr/bin/python3`; change it if your Python is elsewhere. It runs as your ordinary user and writes alert history beside `config.json`.
+Edit `examples/apple-pickup-monitor.service` and replace every `YOUR_USER` placeholder and directory with the actual user/repository path. Raspberry Pi usernames are not necessarily `pi`. The service uses `/usr/bin/python3`; change it if your Python is elsewhere. It runs as your ordinary user and loads your private `config.json`. Monitoring history stays in memory, as in the original script.
 
 ```sh
 sudo cp examples/apple-pickup-monitor.service /etc/systemd/system/apple-pickup-monitor.service
@@ -178,7 +173,7 @@ For authenticated ntfy, create `/etc/apple-pickup-monitor.env` with a text edito
 sudo systemctl restart apple-pickup-monitor
 ```
 
-The background service cannot ask setup questions. Check the paths and create its configuration first. Logs use the machine's local time zone; the interval is elapsed time and has no Rome-specific schedule.
+The background service cannot ask setup questions. Check the paths and create its configuration first. Logs and optional fast windows use the machine's local time zone; there is no fixed Rome time zone.
 
 ## Windows
 
@@ -196,7 +191,7 @@ Keep the terminal open or create a Windows Task Scheduler task at logon with you
 
 ## Other systems
 
-The script should run on other Linux distributions, a server, a VM or a NAS with Python 3.10+, valid CA certificates, persistent writable storage and outbound HTTPS. These environments have not all been tested. No desktop or browser automation is required. Setup and monitoring do not require root. Mobile operating systems and browser-only environments are not primary targets. A suspended machine or a stopped container cannot check stock.
+The script should run on other Linux distributions, a server, a VM or a NAS with Python 3.10+, valid CA certificates, storage for your private configuration and outbound HTTPS. These environments have not all been tested. No desktop or browser automation is required. Setup and monitoring do not require root. Mobile operating systems and browser-only environments are not primary targets. A suspended machine or a stopped container cannot check stock.
 
 ## Commands and configuration
 
@@ -205,77 +200,95 @@ python3 check_iphone_duo.py --help
 python3 check_iphone_duo.py --setup --config london.json
 python3 check_iphone_duo.py --config london.json
 python3 check_iphone_duo.py --once --config london.json
-python3 check_iphone_duo.py --config london.json --state /absolute/private/path/london-state.json
 ```
 
-`--once` exits 0 only when **every selected pair** has an explicit supported availability status; 1 means an incomplete/failed check or invalid configuration. Availability itself is not an exit status: both available and unavailable can be successful checks. Ctrl+C exits 130. Failed ntfy delivery is logged and retried on a later positive check; `--once` does not wait for another attempt, and its exit code describes Apple checks, not notification delivery.
+`--once` performs real stock checks and can send stock/daily-status messages, but skips the startup message. Exit 0 means that the original cycle logic considers the round successful: at least one request succeeded and the round was not aborted. A partial round can therefore exit 0; inspect the request error count. Exit 1 means a failed round or configuration/startup error. With multiple families, `--once` returns 1 if any family's round fails. Availability itself is not an exit status.
 
-The JSON generated by setup contains:
-
-| Field | Meaning |
+| JSON field | Meaning |
 | --- | --- |
-| `version` | Configuration schema version, currently `1` |
+| `version` | Configuration schema, currently `1` |
 | `shop_url` | Regional Apple shop root |
-| `interval_minutes` | Minutes to wait **after** a check completes |
-| `products` | Selected objects with `part`, `name` and regional purchase-page `url` |
-| `stores` | Selected objects with exact `id` and display `name` |
-| `ntfy.enabled` | `true` for phone notifications; `false` for terminal-only output |
-| `ntfy.server` / `ntfy.topic` | Your HTTPS server root and personal topic, when enabled |
+| `locations` | Postal-code/location strings used for nearby searches |
+| `products` | Query variants: objects with regional `part`, display `name` and purchase-page `url` |
+| `stores` | Selected objects with `id` and `name`, used for direct requests and original name filtering |
+| `interval_minutes` | Normal target minutes between starts of checking rounds |
+| `ntfy.enabled` | Whether to publish notifications |
+| `ntfy.server`, `ntfy.topic` | Your HTTPS server root and existing topic name |
+| `timezone` | Optional IANA zone; setup uses the first selected store's zone if provided, otherwise the computer's local time |
+| `heartbeat_hour` | Optional local hour for the daily message; default `9`, `null` disables it |
+| `fast_schedule` | Optional faster local-time schedule; omitted/`null` uses the selected normal interval all day |
 
-Edit the file while the monitor is stopped, or rerun setup. Settings are loaded at startup. There is no dependency installation, `.env` loader, hard-coded topic, embedded token, fast time window or daily heartbeat. `NTFY_TOKEN` is the only notification setting read from the environment. The old `NTFY_TOPIC` environment variable is no longer used. The old `--test-notify`, `--product` and `--part` test overrides have been removed; select production variants through setup instead.
+The original faster schedule can be configured by adding:
 
-Each round sends one Apple request per selected variant/store pair, with a 1–2 second pause between requests. Eight variants across five stores means 40 requests per round. Keep selections focused and start with the 15-minute default. Incomplete rounds gradually increase the pause up to at least 32 minutes. A 403/429/541 stops that round and triggers a pause of at least 30 minutes. A longer user-configured interval always wins. Five consecutive connection/response failures also stop a round. There are no proxy rotations or block bypasses.
+```json
+"fast_schedule": {"minutes": 2, "windows": [[6, 0, 10, 0]]}
+```
 
-## Alert history and unknown results
+There is no fixed Rome schedule or Italian SKU suffix for other regions. The normal/fast interval calculation remains the original function: subtract checking time and leave at least 30 seconds of rest. The daily heartbeat is normally sent after 09:00 on subsequent days because startup marks the current day as reported. Settings are loaded at launch; stop and restart after edits.
 
-State defaults to `<config stem>.state.json` next to the configuration: `config.json` uses `config.state.json`; `london.json` uses `london.state.json`. Keep that file on persistent storage. Run **one process per configuration/state file**; concurrent runs are unsupported and can duplicate alerts or overwrite history.
+Part-number discovery retains the original six-hour cache and fallback to known parts. Its inputs are configured purchase pages and selected query SKUs, so discovery does not silently expand your query selection to every phone on the page. The Apple response parser still reads recommended alternatives in the same family. Multiple families are checked sequentially with separate original monitor instances and deduplication/failure counters.
 
-- An exact selected SKU/store pair with `pickupDisplay: available` produces an alert.
-- Another alert is suppressed after successful delivery, including across restarts.
-- Two explicit consecutive unavailable/ineligible observations for that pair rearm the alert. Unknown/error observations do not increment the counter or erase history; a confirmed available observation resets it.
-- If ntfy delivery fails, the next confirmed positive observation retries. No old stock alert is blindly replayed after hours of downtime.
-- Changing product/store/notification configuration resets the history identity. Removing state also resets history and can generate fresh alerts.
+## Error handling: original behavior
 
-**`UNKNOWN` does not mean out of stock.** Apple sometimes returns a store with an empty `partsAvailability` object (this was observed in a live check). Missing stores, missing exact SKUs and unrecognized status values also remain unknown. The script does not guess from recommendation text, availability of a different SKU or a generic `available` string elsewhere in a response. Unknown observations cannot rearm an already delivered alert, so a disappearance/reappearance reported only through empty records may not produce a second notification. Check Apple's website if a pair stays unknown. Even a successful response may become stale immediately.
+- A DNS check precedes the cycle. A disconnected device records a failed round rather than claiming no stock.
+- Apple requests use a 15-second timeout and up to two attempts. HTTP 429, 500, 502, 503, 504 and 541 and network errors can be retried after 2–4 seconds. Non-transient HTTP errors are not retried immediately.
+- The original 0.8–1.5 second request pause remains. Five consecutive failed requests abort that family's cycle.
+- After three failed cycles, an error notification is sent; a later successful cycle sends a recovery message. Partial cycles count as successful, as in the original.
+- Availability that disappears is forgotten after two eligible cycles; absence counters are updated only when at least 75% of requests succeeded. Failed/aborted cycles preserve availability history.
+- Newly seen availability produces grouped alerts, using the original first-eight-product-lines limit. Successful repeats are suppressed until the pair is forgotten. A restart clears this in-memory history and can alert again.
+- ntfy sends have a 10-second timeout and up to three attempts, with 2, 4 and 6 second waits after failures. Undelivered stock notifications remain in the original two-hour queue, retried before later connected checks. The queue is in memory and is lost on exit. Delayed messages are labelled `(delayed)` and may describe stock that has since changed. Startup/error/recovery/heartbeat messages use immediate attempts and are not queued.
+- Unexpected errors in continuous checking are logged and the monitor continues. There is no added exponential backoff, persistent-state suppression or exact-SKU response filter.
 
-After a service interruption, inspect logs: there is no separate heartbeat or failure notification. A small possibility of a duplicate remains if the process crashes after ntfy accepts a message but before state is saved. Local state and notifications are not an atomic transaction.
+Empty pickup availability is logged as no availability, as in the original. Malformed JSON or a missing `body` is a reading error. The original parser also retains its permissive empty-body/pickup handling and broad fallback for an `available` string elsewhere in the response; the original product/store filters still apply afterward. These are the original semantics, not a new interpretation of Apple's undocumented data format. A physical store may have units not offered through online pickup; a web response can also change immediately.
+
+The target count per family is `query variants × (postal locations + selected direct stores)`, before retries and occasional discovery requests. Keep selections focused and use a sensible interval. If Apple repeatedly rejects requests, stop, increase the interval and try later. There are no proxy rotations or block bypasses.
+
+## Updating from the earlier rewritten versions
+
+Replace the project files with this ZIP, **including `configuration.py` beside the main script**. You may keep your private `config.json`. If it lacks `locations`, the next terminal run asks only for the postal code/location needed to restore the original nearby searches and saves it. A background service cannot answer that prompt: run once interactively first, or rerun setup. No personal location is hard-coded in the distribution.
+
+The previous `--state` option and state-file mechanism have been removed. Existing state files are ignored and do not block startup/stock notifications. No state or personal configuration is included in the release. Old test-only flags (`--test-notify`, `--part`, `--product`) remain removed. The `NTFY_TOPIC` environment variable does not override configuration; enter the topic through setup. `NTFY_TOKEN` remains the optional authentication environment variable.
+
+Only run one foreground/background instance per configuration unless you deliberately want duplicate checks and notifications. Stop the foreground process before enabling a service.
 
 ## Troubleshooting
 
 | Symptom | What to check |
 | --- | --- |
-| No nearby stores | Correct regional shop and postal code; verify pickup is offered on Apple's website; try a nearby postal code. |
-| No variants | Use the correct purchase page and regional SKUs; Apple may have changed the page format. |
-| HTTP 403 / 429 / 541 | Leave the monitor stopped/paused, increase the interval, and try later. Do not repeatedly restart it to bypass backoff. |
-| Repeated `UNKNOWN` | Open the selected product on Apple; the response may omit exact stock details. Unknown is not a negative stock result. |
-| No phone notification | Same server/topic in the app and config; phone permissions, server limits, topic access and `NTFY_TOKEN`; inspect the delivery error in logs. |
-| Duplicate alerts | Check for a foreground process plus a service, missing/unwritable state, or a changed configuration. |
-| Service fails immediately | Absolute paths, supported Python, valid JSON, existing setup and writable state directory; inspect service logs. |
-| HTTPS certificate error | Install/update trusted CA certificates, correct the system clock and configure legitimate network CA certificates. Never disable TLS verification. |
-| Mac/Pi stops checking | Sleep, power loss, disconnected network, closed terminal or disabled service. |
+| Setup finished but no startup notification | Run the script again without `--setup` or `--once`; setup only saves configuration. |
+| `ntfy disabled` in the terminal | Enable ntfy in setup or set `ntfy.enabled` to `true` with your correct existing server/topic. |
+| Startup notification not received | Check the printed destination against the app, then look for `ntfy notification not delivered` and its error after the attempts finish. Check phone permissions and topic authorization. |
+| A requested variant is absent but other phones are listed | Apple's recommendations can contain different colors/capacities. Read the actual returned title. This is the original parser behavior. |
+| No availability | Confirm selected model/store names and regional shop, try another nearby postal code and check Apple's website. No stock is guaranteed. |
+| `available but ... ignored` | The returned product family or store name does not match your configured original filters. |
+| HTTP errors, DNS failure or invalid JSON | The cycle may be failed/partial, not a trustworthy negative stock result. Inspect the log; repeated failures trigger an error notification if ntfy itself works. |
+| HTTPS certificate error | Update/install trusted CA certificates or run the python.org `Install Certificates.command`; keep TLS verification enabled. |
+| Service exits asking for setup/location | Run interactively first and verify the service's absolute `--config` path. |
+| Duplicate startup/stock alerts | Check for a service plus a terminal process, service restarts or another monitor using the same topic. Restarting resets original in-memory history. |
+| Checking pauses | Sleep, power/network loss, a closed terminal or a stopped service. |
 
 ## Development and publishing
 
-The production script contains no notification test command or test-specific product overrides. The separate regression suite uses simulated responses and sends **no network requests or notifications**:
+The offline regression suite sends no Apple requests or ntfy notifications:
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-A GitHub Actions workflow runs those checks on Linux, macOS and Windows with Python 3.10 and 3.13. Platform startup examples must still be adjusted to the machine; CI does not install launchd/systemd services or prove live stock availability.
+It checks the original core's structure against `tests/original_core.sha256`, request routing through both nearby and direct-store queries, alternative variants, original error/grace/retry handling, and startup's POST URL/body/headers. Translated messages are normalized for the structure comparison. Separate validation also compared original/rebuilt parsing and full-cycle results using real Apple responses; such a comparison verifies response handling, not future stock or phone delivery.
 
-Before publishing, keep only the source, README, startup examples, tests and workflow. `.gitignore` excludes local JSON configurations/history, logs, `.env` files, Python caches and private installed startup files. It cannot remove secrets already committed to Git history. Review `git status` and the staged diff before committing. The distributed project contains no personal topic, token, postal code or selected store configuration.
+GitHub Actions runs the offline suite on Linux, macOS and Windows with Python 3.10 and 3.13. Startup services and every international shop have not been tested on real machines. `.gitignore` excludes personal JSON configurations, previous state files, logs, `.env` files and Python caches. It cannot remove secrets already committed. Review staged files before publishing.
 
-To create your own repository, create an empty GitHub repository, then run from this project directory (replace the URL):
+Create an empty GitHub repository, then from this folder (replace the URL):
 
 ```sh
 git init
-git add check_iphone_duo.py README.md .gitignore examples tests .github
+git add check_iphone_duo.py configuration.py README.md .gitignore examples tests .github
 git diff --cached
-git commit -m "Add configurable Apple pickup monitor"
+git commit -m "Add guided configuration to original Apple pickup monitor"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/apple-pickup-monitor.git
 git push -u origin main
 ```
 
-Authenticate to GitHub using your preferred supported method. Choose and add a license before sharing if you want to grant others permission to reuse/modify the code; no license has been imposed on your original script. Apple and ntfy are trademarks of their respective owners; this project is not affiliated with either.
+Choose a license before publication if you want to grant reuse/modification rights; no license has been imposed on the original script. This project is not affiliated with Apple or ntfy.

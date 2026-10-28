@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "shop_url": "https://www.apple.com/it/shop/",
+  "interval_minutes": 15.0,
+  "locations": [
+    "00144",
+    "00186",
+    "00139"
+  ],
+  "timezone": "Europe/Rome",
+  "products": [
+    {
+      "part": "MK2J4QL/A",
+      "name": "iPhone Duo 1TB Night Sky",
+      "url": "https://www.apple.com/it/shop/buy-iphone/iphone-duo"
+    },
+    {
+      "part": "MK2G4QL/A",
+      "name": "iPhone Duo 512GB Night Sky",
+      "url": "https://www.apple.com/it/shop/buy-iphone/iphone-duo"
+    }
+  ],
+  "stores": [
+    {
+      "id": "R562",
+      "name": "Euroma2"
+    },
+    {
+      "id": "R382",
+      "name": "Via del Corso"
+    },
+    {
+      "id": "R381",
+      "name": "Porta di Roma"
+    }
+  ],
+  "ntfy": {
+    "enabled": true,
+    "server": "https://ntfy.sh",
+    "topic": "foldableapple-roma-sb1998"
+  }
+}
